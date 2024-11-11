@@ -109,8 +109,8 @@ resource "aws_iam_policy" "s3_backup_policy" {
         Effect = "Allow",
         Action = ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
         Resource = [
-          aws_s3_bucket.backup_bucket.arn,
-          "${aws_s3_bucket.backup_bucket.arn}/*"
+          aws_s3_bucket.wfta_backup_tr_bucket.arn,
+          "${aws_s3_bucket.wfta_backup_tr_bucket.arn}/*"
         ]
       },
       {
@@ -133,8 +133,45 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 }
 
+# EKS IAM Role and Policies
+resource "aws_iam_role" "eks_role" {
+  name = "eks_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_policy_attachment" {
+  role       = aws_iam_role.eks_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_service_policy_attachment" {
+  role       = aws_iam_role.eks_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_vpc_policy_attachment" {
+  role       = aws_iam_role.eks_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+}
+
+resource "aws_iam_instance_profile" "eks_instance_profile" {
+  role = aws_iam_role.eks_role.name
+}
+
 # S3 Bucket for Database Backups
-resource "aws_s3_bucket" "backup_bucket" {
+resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
   bucket = "my-db-backup-bucket"
 
   tags = {
@@ -143,24 +180,24 @@ resource "aws_s3_bucket" "backup_bucket" {
 }
 
 # S3 Bucket Public Access Block
-resource "aws_s3_bucket_public_access_block" "backup_bucket_block" {
-  bucket = aws_s3_bucket.backup_bucket.id
+resource "aws_s3_bucket_public_access_block" "wfta_backup_tr_bucket_block" {
+  bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
 
   block_public_acls   = false
   block_public_policy = false
 }
 
 # S3 Bucket Versioning
-resource "aws_s3_bucket_versioning" "backup_bucket_versioning" {
-  bucket = aws_s3_bucket.backup_bucket.id
+resource "aws_s3_bucket_versioning" "wfta_backup_tr_bucket_versioning" {
+  bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 # S3 Bucket Lifecycle Configuration for Backup Expiration
-resource "aws_s3_bucket_lifecycle_configuration" "backup_bucket_lifecycle" {
-  bucket = aws_s3_bucket.backup_bucket.id
+resource "aws_s3_bucket_lifecycle_configuration" "wfta_backup_tr_bucket_lifecycle" {
+  bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
 
   rule {
     id     = "auto-delete-old-backups"
@@ -210,7 +247,7 @@ resource "aws_instance" "database_server" {
       "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
       "echo 'timestamp=$(date +\"%Y-%m-%d_%H-%M-%S\")' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "echo 'mongodump --username admin --password password --authenticationDatabase admin --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
-      "echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.backup_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.wfta_backup_tr_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "echo 'rm -rf /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "sudo chmod +x /usr/local/bin/mongo_backup.sh",
 
@@ -228,6 +265,7 @@ module "eks" {
   vpc_id          = aws_vpc.main.id
   subnet_ids      = [aws_subnet.private.id]
   enable_irsa     = true
+  iam_role_arn = aws_iam_role.eks_role.arn
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
