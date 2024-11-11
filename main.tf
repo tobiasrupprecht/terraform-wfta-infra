@@ -232,47 +232,38 @@ resource "aws_instance" "database_server" {
   associate_public_ip_address = true
   key_name                    = "ssh-key"
 
-  user_data     = <<-EOF
-      sudo apt-get update -y
-      sudo apt-get install -y mongodb awscli
-      sudo systemctl start mongodb
-      sudo systemctl enable mongodb
-      sudo mongo --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'
-      echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh
-      echo 'timestamp=$(date +\"%Y-%m-%d_%H-%M-%S\")' | sudo tee -a /usr/local/bin/mongo_backup.sh
-      echo 'mongodump --username admin --password password --authenticationDatabase admin --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh
-      echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.wfta_backup_tr_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh
-      echo 'rm -rf /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh
-      sudo chmod +x /usr/local/bin/mongo_backup.sh
-      (crontab -l 2>/dev/null; echo '0 2 * * * /usr/local/bin/mongo_backup.sh') | crontab -
-                      EOF
-
   tags = {
     Name = "DatabaseServer"
   }
-
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    private_key = var.private_key
+    host        = self.public_ip
+  }
+  
   # Install MongoDB, configure authentication, and set up automated backups
- # provisioner "remote-exec" {
- #   inline = [
- #     "sudo apt-get update -y",
- #     "sudo apt-get install -y mongodb awscli",
- #     "sudo systemctl start mongodb",
- #     "sudo systemctl enable mongodb",
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get update -y",
+      "sudo apt-get install -y mongodb awscli",
+      "sudo systemctl start mongodb",
+      "sudo systemctl enable mongodb",
       # Configure MongoDB authentication
- #     "sudo mongo --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
+      "sudo mongo --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
 
       # Create backup script
- #     "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
- #     "echo 'timestamp=$(date +\"%Y-%m-%d_%H-%M-%S\")' | sudo tee -a /usr/local/bin/mongo_backup.sh",
- #     "echo 'mongodump --username admin --password password --authenticationDatabase admin --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
- #     "echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.wfta_backup_tr_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh",
- #     "echo 'rm -rf /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
- #     "sudo chmod +x /usr/local/bin/mongo_backup.sh",
+      "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
+      "echo 'timestamp=$(date +\"%Y-%m-%d_%H-%M-%S\")' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "echo 'mongodump --username admin --password password --authenticationDatabase admin --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.wfta_backup_tr_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "echo 'rm -rf /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "sudo chmod +x /usr/local/bin/mongo_backup.sh",
 
       # Set up a cron job to run the backup script daily at 2 AM
- #     "(crontab -l 2>/dev/null; echo '0 2 * * * /usr/local/bin/mongo_backup.sh') | crontab -"
- #   ]
- # }
+      "(crontab -l 2>/dev/null; echo '0 2 * * * /usr/local/bin/mongo_backup.sh') | crontab -"
+    ]
+  }
 }
 
 # EKS Cluster for Web Application
