@@ -168,7 +168,7 @@ resource "aws_instance" "database_server" {
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
-  key_name                    = aws_key_pair.ssh-key
+  key_name                    = "ssh-key"
 
 
   tags = {
