@@ -132,7 +132,8 @@ resource "aws_iam_role_policy_attachment" "s3_backup_policy_attach" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 }
-
+######### Unsure if I need the following section
+####################################
 # EKS IAM Role and Policies
 resource "aws_iam_role" "eks_role" {
   name = "eks_role"
@@ -169,6 +170,8 @@ resource "aws_iam_role_policy_attachment" "eks_vpc_policy_attachment" {
 resource "aws_iam_instance_profile" "eks_instance_profile" {
   role = aws_iam_role.eks_role.name
 }
+#################### Unsure if I need the section above
+#############################################################
 
 # S3 Bucket for Database Backups
 resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
@@ -221,7 +224,7 @@ resource "aws_key_pair" "ssh-key" {
 
 # EC2 Instance for Database Server with Backup Functionality
 resource "aws_instance" "database_server" {
-  ami                         = "ami-0abcdef1234567890" # Replace with a MongoDB-compatible AMI
+  ami                         = "ami-04907d7291cd8e06a" # Amazon Linux AMI
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
@@ -261,7 +264,7 @@ resource "aws_instance" "database_server" {
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
   cluster_name    = "web-app-cluster"
-  cluster_version = "1.21"
+  cluster_version = "1.31"
   vpc_id          = aws_vpc.main.id
   subnet_ids      = [aws_subnet.private.id]
   enable_irsa     = true
