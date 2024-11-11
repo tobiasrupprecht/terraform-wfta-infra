@@ -8,17 +8,28 @@ resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 
-resource "aws_subnet" "main" {
+# Private Subnet Configuration for EKS
+resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
   availability_zone = "us-west-2a" # Set the appropriate AZ here
 }
 
+# Public Subnet Configuration for EC2 and Load Balancer
+resource "aws_subnet" "public" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "us-west-2a"
+  map_public_ip_on_launch = true
+}
+
+# Internet Gateway for Public Subnet
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
 
-resource "aws_route_table" "main" {
+# Public Route Table
+resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -27,9 +38,19 @@ resource "aws_route_table" "main" {
   }
 }
 
-resource "aws_route_table_association" "main" {
-  subnet_id      = aws_subnet.main.id
-  route_table_id = aws_route_table.main.id
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public_route_table.id
+}
+
+# Private Route Table for EKS (no internet access required for cluster nodes directly)
+resource "aws_route_table" "private_route_table" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private_route_table.id
 }
 
 # Security Group for Database Server
@@ -43,7 +64,7 @@ resource "aws_security_group" "database_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow traffic from the VPC
+  # Allow MongoDB traffic within VPC
   ingress {
     from_port   = 27017
     to_port     = 27017
@@ -154,6 +175,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backup_bucket_lifecycle" {
     }
   }
 }
+
 # Create SSH Keypair to use with EC2 instance
 resource "aws_key_pair" "ssh-key" {
   key_name   = "ssh-key"
@@ -164,12 +186,11 @@ resource "aws_key_pair" "ssh-key" {
 resource "aws_instance" "database_server" {
   ami                         = "ami-0abcdef1234567890" # Replace with a MongoDB-compatible AMI
   instance_type               = "t2.micro"
-  subnet_id                   = aws_subnet.main.id
+  subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
   key_name                    = "ssh-key"
-
 
   tags = {
     Name = "DatabaseServer"
@@ -205,7 +226,7 @@ module "eks" {
   cluster_name    = "web-app-cluster"
   cluster_version = "1.21"
   vpc_id          = aws_vpc.main.id
-  subnet_ids      = [aws_subnet.main.id]
+  subnet_ids      = [aws_subnet.private.id]
   enable_irsa     = true
 
   eks_managed_node_group_defaults = {
@@ -249,6 +270,7 @@ resource "kubernetes_service" "web_app" {
     namespace = "default"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-security-groups" = aws_security_group.eks_lb_sg.id
+      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = aws_subnet.public.id
     }
   }
 
