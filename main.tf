@@ -172,7 +172,7 @@ resource "aws_iam_instance_profile" "eks_instance_profile" {
 
 # S3 Bucket for Database Backups
 resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
-  bucket = "my-db-backup-bucket"
+  bucket = "wfta-backup-bucket-tr"
 
   tags = {
     Name = "DatabaseBackupBucket"
