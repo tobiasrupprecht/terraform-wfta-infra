@@ -288,7 +288,22 @@ resource "aws_instance" "database_server" {
     ]
   }
 }
+# Adding VPC CNI Policy and IPv4 (--> hope to fix NodeCreation issue)
+module "vpc_cni_irsa_role" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
+  role_name = "vpc-cni"
+
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["default:web-app"]
+    }
+  }
+}
 # EKS Cluster for Web Application
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
@@ -335,6 +350,9 @@ resource "aws_security_group" "eks_lb_sg" {
 
 # Kubernetes Service for Web Application
 resource "kubernetes_service" "web_app" {
+  depends_on = [
+    module.eks
+  ]
   metadata {
     name      = "web-app"
     namespace = "default"
@@ -358,6 +376,9 @@ resource "kubernetes_service" "web_app" {
 
 # Kubernetes Deployment for Web Application
 resource "kubernetes_deployment" "web_app_deployment" {
+  depends_on = [
+    module.eks
+  ]
   metadata {
     name = "web-app"
   }
