@@ -8,11 +8,18 @@ resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 
-# Private Subnet Configuration for EKS
-resource "aws_subnet" "private" {
+# Private Subnet Configuration for EKS - Subnet 1
+resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
   availability_zone = "us-west-2a" # Set the appropriate AZ here
+}
+
+# Private Subnet Configuration for EKS - Subnet 2
+resource "aws_subnet" "private_2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-west-2b"
 }
 
 # Public Subnet Configuration for EC2 and Load Balancer
@@ -48,8 +55,13 @@ resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.main.id
 }
 
-resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private.id
+resource "aws_route_table_association" "private_1" {
+  subnet_id      = aws_subnet.private_1.id
+  route_table_id = aws_route_table.private_route_table.id
+}
+
+resource "aws_route_table_association" "private_2" {
+  subnet_id      = aws_subnet.private_2.id
   route_table_id = aws_route_table.private_route_table.id
 }
 
@@ -245,9 +257,20 @@ resource "aws_instance" "database_server" {
   # Install MongoDB, configure authentication, and set up automated backups
   provisioner "remote-exec" {
     inline = [
-      "sudo apt-get update -y",
-      "sudo apt-get install -y mongodb awscli",
+      # Making everything ready to install mongodb with yum on Amazon Linux
+      "echo '[mongodb-org-8.0]' | sudo tee /etc/yum.repos.d/mongodb-org-8.0.repo",
+      "echo 'name=MongoDB Repository' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      "echo 'baseurl=https://repo.mongodb.org/yum/amazon/2023/mongodb-org/8.0/x86_64/' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      "echo 'gpgcheck=1' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      "echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      "echo 'gpgkey=https://pgp.mongodb.com/server-8.0.asc' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      # Install MongoDB
+      "sudo yum install -y mongodb-org",
+      # Make sure connection from outside is possible
+      "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: 0.0.0.0/' /etc/mongod.conf",
+      # Start MongoDB
       "sudo systemctl start mongodb",
+      "sudo systemctl daemon-reload",
       "sudo systemctl enable mongodb",
       # Configure MongoDB authentication
       "sudo mongo --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
@@ -272,7 +295,7 @@ module "eks" {
   cluster_name    = "web-app-cluster"
   cluster_version = "1.31"
   vpc_id          = aws_vpc.main.id
-  subnet_ids      = [aws_subnet.private.id]
+  subnet_ids      = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   enable_irsa     = true
   iam_role_arn = aws_iam_role.eks_role.arn
 
@@ -285,8 +308,8 @@ module "eks" {
       instance_types = ["t2.micro"]
 
       min_size     = 1
-      max_size     = 1
-      desired_size = 1
+      max_size     = 3
+      desired_size = 2
     }
   }
 }
@@ -317,7 +340,7 @@ resource "kubernetes_service" "web_app" {
     namespace = "default"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-security-groups" = aws_security_group.eks_lb_sg.id
-      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = aws_subnet.public.id
+      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = "${aws_subnet.public.id},${aws_subnet.private_1.id}"
     }
   }
 
