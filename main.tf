@@ -241,7 +241,7 @@ resource "aws_instance" "database_server" {
     private_key = var.private_key
     host        = self.public_ip
   }
-  
+
   # Install MongoDB, configure authentication, and set up automated backups
   provisioner "remote-exec" {
     inline = [
@@ -285,8 +285,8 @@ module "eks" {
       instance_types = ["t2.micro"]
 
       min_size     = 1
-      max_size     = 3
-      desired_size = 2
+      max_size     = 1
+      desired_size = 1
     }
   }
 }
