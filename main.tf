@@ -326,7 +326,7 @@ resource "kubernetes_service" "web_app_lb" {
     namespace = "default"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-security-groups" = aws_security_group.eks_lb_sg.id
-      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = flatten("${module.vpc.private_subnets},${module.vpc.public_subnets}")
+      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = "${element(module.vpc.public_subnets, 0)},${element(module.vpc.public_subnets, 1)}, ${element(module.vpc.public_subnets, 2)}, ${element(module.vpc.private_subnets, 0)}, ${element(module.vpc.private_subnets, 1)}, ${element(module.vpc.private_subnets, 2)}"
     }
   }
 
