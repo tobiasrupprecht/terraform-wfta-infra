@@ -33,7 +33,7 @@ resource "aws_security_group" "database_sg" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-    cidr_blocks = [module.vpc.cidr_block]
+    cidr_blocks = [module.vpc.cidr]
   }
 
   # Allow SSH from the public internet
