@@ -9,5 +9,5 @@ output "cluster_endpoint" {
 
 output "load_balancer_address" {
   description = "Public IP of the LoadBalancer service"
-  value       = kubernetes_service.sample_app_lb.status[0].load_balancer[0].ingress[0].ip
+  value       = kubernetes_service.web_app_lb.status[0].load_balancer[0].ingress[0].ip
 }

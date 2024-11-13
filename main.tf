@@ -190,7 +190,7 @@ resource "aws_key_pair" "ssh-key" {
 resource "aws_instance" "database_server" {
   ami                         = "ami-066a7fbea5161f451" # Amazon Linux 2023 AMI
   instance_type               = "t2.micro"
-  subnet_id                   = "${element(module.vpc.publice_subnets, 0)}"
+  subnet_id                   = "${element(module.vpc.public_subnets, 0)}"
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
@@ -310,19 +310,19 @@ resource "aws_security_group" "eks_lb_sg" {
   }
 }
 # Kubernetes provider
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  token                  = data.aws_eks_cluster_auth.main.token
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-}
+#provider "kubernetes" {
+#  host                   = module.eks.cluster_endpoint
+#  token                  = data.aws_eks_cluster_auth.main.token
+#  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#}
 
 # Kubernetes Service for Web Application
-resource "kubernetes_service" "web_app" {
+resource "kubernetes_service" "web_app_lb" {
   depends_on = [
     module.eks
   ]
   metadata {
-    name      = "web-app"
+    name      = "web-app-lb"
     namespace = "default"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-security-groups" = aws_security_group.eks_lb_sg.id
@@ -332,12 +332,13 @@ resource "kubernetes_service" "web_app" {
 
   spec {
     selector = {
-      app = "web-app"
+      app = "web-app-lb"
     }
     port {
       port        = 80
       target_port = 8080
     }
+    load_balancer_ip = null # AWS will automatically assign an external IP
     type = "LoadBalancer"
   }
 }
