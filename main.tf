@@ -1,88 +1,25 @@
 # Provider configuration
 provider "aws" {
-  region = "us-west-2" # Set your desired AWS region here
+  region = var.region # Set your desired AWS region here
 }
 
-# VPC Configuration
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-}
+# Define the VPC and subnets
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = ">= 3.0.0"
 
-# Private Subnet Configuration for EKS - Subnet 1
-resource "aws_subnet" "private_1" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-west-2a" # Set the appropriate AZ here
-}
-
-# Private Subnet Configuration for EKS - Subnet 2
-resource "aws_subnet" "private_2" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.3.0/24"
-  availability_zone = "us-west-2b"
-}
-
-# Public Subnet Configuration for EC2 and Load Balancer
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "us-west-2b"
-  map_public_ip_on_launch = true
-}
-
-# Internet Gateway for Public Subnet
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-}
-
-# NAT Gateway and EIP for EKS Cluster in hope to fix NodeCreation Failure
-resource "aws_eip" "lb" {
-  depends_on = [aws_internet_gateway.main]
-  domain     = "vpc"
-}
-
-resource "aws_nat_gateway" "natgw" {
-  allocation_id = aws_eip.lb.id
-  subnet_id     = aws_subnet.public.id
-  depends_on    = [aws_internet_gateway.main]
-  tags = {
-    Name = "NAT Gateway EKS"
-  }
-}
-
-# Public Route Table
-resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-}
-
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public_route_table.id
-}
-
-# Private Route Table for EKS (no internet access required for cluster nodes directly)
-resource "aws_route_table" "private_route_table" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_route_table_association" "private_1" {
-  subnet_id      = aws_subnet.private_1.id
-  route_table_id = aws_route_table.private_route_table.id
-}
-
-resource "aws_route_table_association" "private_2" {
-  subnet_id      = aws_subnet.private_2.id
-  route_table_id = aws_route_table.private_route_table.id
+  name                 = "main"
+  cidr                 = "10.0.0.0/16"
+  azs                  = ["${var.region}a", "${var.region}b", "${var.region}c"]
+  private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets       = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  enable_nat_gateway   = true
+  enable_dns_hostnames = true
 }
 
 # Security Group for Database Server
 resource "aws_security_group" "database_sg" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.main.id
 
   egress {
     from_port   = 0
@@ -96,7 +33,7 @@ resource "aws_security_group" "database_sg" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block]
+    cidr_blocks = [module.vpc.main.id.cidr_block]
   }
 
   # Allow SSH from the public internet
@@ -253,7 +190,7 @@ resource "aws_key_pair" "ssh-key" {
 resource "aws_instance" "database_server" {
   ami                         = "ami-066a7fbea5161f451" # Amazon Linux 2023 AMI
   instance_type               = "t2.micro"
-  subnet_id                   = aws_subnet.public.id
+  subnet_id                   = "${element(module.vpc.publice_subnets, 0)}"
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
@@ -291,8 +228,9 @@ resource "aws_instance" "database_server" {
       "sudo systemctl start mongod",
       "sudo systemctl daemon-reload",
       "sudo systemctl enable mongod",
+      "sudo sleep 10",
       # Configure MongoDB authentication
-      "sudo mongosh --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
+      "sudo mongosh --eval '\"db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})\"'",
 
       # Create backup script
       "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
@@ -327,32 +265,16 @@ resource "aws_instance" "database_server" {
     ]
   }
 }
-# Adding VPC CNI Policy and IPv4 (--> hope to fix NodeCreation issue)
-module "vpc_cni_irsa_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
-  role_name = "vpc-cni"
-
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["default:web-app"]
-    }
-  }
-}
 # EKS Cluster for Web Application
 module "eks" {
-  source                   = "terraform-aws-modules/eks/aws"
-  cluster_name             = "web-app-cluster"
-  cluster_version          = "1.31"
-  vpc_id                   = aws_vpc.main.id
-  subnet_ids               = [aws_subnet.public.id, aws_subnet.private_1.id, aws_subnet.private_2.id]
-  control_plane_subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  enable_irsa              = true
-  iam_role_arn             = aws_iam_role.eks_role.arn
+  source                         = "terraform-aws-modules/eks/aws"
+  cluster_name                   = "web-app-cluster"
+  cluster_version                = "1.31"
+  vpc_id                         = module.vpc.main.id
+  subnet_ids                     = module.vpc.private_subnets
+  iam_role_arn                   = aws_iam_role.eks_role.arn
+  cluster_endpoint_public_access = true
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
@@ -371,7 +293,7 @@ module "eks" {
 
 # Security Group for EKS LoadBalancer
 resource "aws_security_group" "eks_lb_sg" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.main.id
 
   egress {
     from_port   = 0
@@ -386,6 +308,12 @@ resource "aws_security_group" "eks_lb_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+# Kubernetes provider
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  token                  = data.aws_eks_cluster_auth.main.token
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 }
 
 # Kubernetes Service for Web Application
