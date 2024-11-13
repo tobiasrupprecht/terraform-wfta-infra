@@ -24,9 +24,9 @@ resource "aws_subnet" "private_2" {
 
 # Public Subnet Configuration for EC2 and Load Balancer
 resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-west-2b"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-west-2b"
   map_public_ip_on_launch = true
 }
 
@@ -37,14 +37,14 @@ resource "aws_internet_gateway" "main" {
 
 # NAT Gateway and EIP for EKS Cluster in hope to fix NodeCreation Failure
 resource "aws_eip" "lb" {
-  depends_on    = [aws_internet_gateway.main]
-  domain        = "vpc"
+  depends_on = [aws_internet_gateway.main]
+  domain     = "vpc"
 }
 
 resource "aws_nat_gateway" "natgw" {
   allocation_id = aws_eip.lb.id
   subnet_id     = aws_subnet.public.id
-  depends_on = [aws_internet_gateway.main]
+  depends_on    = [aws_internet_gateway.main]
   tags = {
     Name = "NAT Gateway EKS"
   }
@@ -287,11 +287,11 @@ resource "aws_instance" "database_server" {
       # Make sure connection from outside is possible
       "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: 0.0.0.0/' /etc/mongod.conf",
       # Start MongoDB
-      "sudo systemctl start mongodb",
+      "sudo systemctl start mongod",
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable mongodb",
+      "sudo systemctl enable mongod",
       # Configure MongoDB authentication
-      "sudo mongo --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
+      "sudo mongosh --eval 'db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})'",
 
       # Create backup script
       "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
@@ -302,13 +302,33 @@ resource "aws_instance" "database_server" {
       "sudo chmod +x /usr/local/bin/mongo_backup.sh",
 
       # Set up a cron job to run the backup script daily at 2 AM
-      "(crontab -l 2>/dev/null; echo '0 2 * * * /usr/local/bin/mongo_backup.sh') | crontab -"
+      #"(crontab -l 2>/dev/null; echo '0 2 * * * /usr/local/bin/mongo_backup.sh') | crontab -"
+      # Set up systemd for the regular backup
+      "echo '[Unit]' | sudo tee /etc/systemd/system/mongo_backup.service",
+      "echo 'Description=MongoDB Backup Service' | sudo tee -a /etc/systemd/system/mongo_backup.service",
+      "echo 'Wants=mongo_backup.timer' | sudo tee -a /etc/systemd/system/mongo_backup.service",
+      "echo '[Service]' | sudo tee -a /etc/systemd/system/mongo_backup.service",
+      "echo 'Type=oneshot' | sudo tee -a /etc/systemd/system/mongo_backup.service",
+      "echo 'ExecStart=/usr/local/bin/mongo_backup.sh' | sudo tee -a /etc/systemd/system/mongo_backup.service",
+      # Create timer file
+      "echo '[Unit]' | sudo tee /etc/systemd/system/mongo_backup.timer",
+      "echo 'Description=Run MongoDB Backup Daily at 2 AM' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      "echo '[Timer]' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      "echo 'OnCalendar=*-*-* 02:00:00' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      "echo 'Persistent=true' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      "echo '[Install]' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      "echo 'WantedBy=timers.target' | sudo tee -a /etc/systemd/system/mongo_backup.timer",
+      # Enable systemd service
+      "sudo systemctl daemon-reload",
+      "sudo systemctl enable mongo_backup.timer",
+      "sudo systemctl start mongo_backup.timer",
+      "systemctl list-timers --all | grep mongo_backup"
     ]
   }
 }
 # Adding VPC CNI Policy and IPv4 (--> hope to fix NodeCreation issue)
 module "vpc_cni_irsa_role" {
-  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
   role_name = "vpc-cni"
 
@@ -324,13 +344,14 @@ module "vpc_cni_irsa_role" {
 }
 # EKS Cluster for Web Application
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = "web-app-cluster"
-  cluster_version = "1.31"
-  vpc_id          = aws_vpc.main.id
-  subnet_ids      = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  enable_irsa     = true
-  iam_role_arn    = aws_iam_role.eks_role.arn
+  source                   = "terraform-aws-modules/eks/aws"
+  cluster_name             = "web-app-cluster"
+  cluster_version          = "1.31"
+  vpc_id                   = aws_vpc.main.id
+  subnet_ids               = [aws_subnet.public, aws_subnet.private_1.id, aws_subnet.private_2.id]
+  control_plane_subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  enable_irsa              = true
+  iam_role_arn             = aws_iam_role.eks_role.arn
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
