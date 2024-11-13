@@ -19,7 +19,7 @@ module "vpc" {
 
 # Security Group for Database Server
 resource "aws_security_group" "database_sg" {
-  vpc_id = module.vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   egress {
     from_port   = 0
@@ -33,7 +33,7 @@ resource "aws_security_group" "database_sg" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-    cidr_blocks = [module.vpc.main.id.cidr_block]
+    cidr_blocks = [module.vpc.vpc_id.cidr_block]
   }
 
   # Allow SSH from the public internet
@@ -271,7 +271,7 @@ module "eks" {
   source                         = "terraform-aws-modules/eks/aws"
   cluster_name                   = "web-app-cluster"
   cluster_version                = "1.31"
-  vpc_id                         = module.vpc.main.id
+  vpc_id                         = module.vpc.vpc_id
   subnet_ids                     = module.vpc.private_subnets
   iam_role_arn                   = aws_iam_role.eks_role.arn
   cluster_endpoint_public_access = true
@@ -293,7 +293,7 @@ module "eks" {
 
 # Security Group for EKS LoadBalancer
 resource "aws_security_group" "eks_lb_sg" {
-  vpc_id = module.vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   egress {
     from_port   = 0
