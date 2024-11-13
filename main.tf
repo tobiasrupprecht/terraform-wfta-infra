@@ -283,6 +283,7 @@ resource "aws_instance" "database_server" {
       ##"yum install glibc-devel",
 
       # Install MongoDB
+      "sudo yum install mongodb-mongosh-shared-openssl3",
       "sudo yum install -y mongodb-org",
       # Make sure connection from outside is possible
       "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: 0.0.0.0/' /etc/mongod.conf",
