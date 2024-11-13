@@ -348,7 +348,7 @@ module "eks" {
   cluster_name             = "web-app-cluster"
   cluster_version          = "1.31"
   vpc_id                   = aws_vpc.main.id
-  subnet_ids               = [aws_subnet.public, aws_subnet.private_1.id, aws_subnet.private_2.id]
+  subnet_ids               = [aws_subnet.public.id, aws_subnet.private_1.id, aws_subnet.private_2.id]
   control_plane_subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   enable_irsa              = true
   iam_role_arn             = aws_iam_role.eks_role.arn
