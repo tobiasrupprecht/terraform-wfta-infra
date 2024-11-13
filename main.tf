@@ -35,6 +35,21 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
 
+# NAT Gateway and EIP for EKS Cluster in hope to fix NodeCreation Failure
+resource "aws_eip" "lb" {
+  depends_on    = [aws_internet_gateway.main]
+  domain        = "vpc"
+}
+
+resource "aws_nat_gateway" "natgw" {
+  allocation_id = aws_eip.lb.id
+  subnet_id     = aws_subnet.public.id
+  depends_on = [aws_internet_gateway.gw]
+  tags = {
+    Name = "NAT Gateway EKS"
+  }
+}
+
 # Public Route Table
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.main.id
@@ -236,7 +251,7 @@ resource "aws_key_pair" "ssh-key" {
 
 # EC2 Instance for Database Server with Backup Functionality
 resource "aws_instance" "database_server" {
-  ami                         = "ami-04907d7291cd8e06a" # Amazon Linux AMI
+  ami                         = "ami-066a7fbea5161f451" # Amazon Linux 2023 AMI
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
@@ -264,6 +279,9 @@ resource "aws_instance" "database_server" {
       "echo 'gpgcheck=1' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
       "echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
       "echo 'gpgkey=https://pgp.mongodb.com/server-8.0.asc' | sudo tee -a /etc/yum.repos.d/mongodb-org-8.0.repo",
+      ##Install necessary dependencies for MongoDB
+      ##"yum install glibc-devel",
+
       # Install MongoDB
       "sudo yum install -y mongodb-org",
       # Make sure connection from outside is possible
@@ -312,7 +330,7 @@ module "eks" {
   vpc_id          = aws_vpc.main.id
   subnet_ids      = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   enable_irsa     = true
-  iam_role_arn = aws_iam_role.eks_role.arn
+  iam_role_arn    = aws_iam_role.eks_role.arn
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
