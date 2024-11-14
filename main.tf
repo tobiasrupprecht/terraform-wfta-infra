@@ -339,13 +339,13 @@ resource "kubernetes_service" "web_app_lb" {
     namespace = "default"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-security-groups" = aws_security_group.eks_lb_sg.id
-      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = "${element(module.vpc.public_subnets, 0)},${element(module.vpc.public_subnets, 1)}, ${element(module.vpc.public_subnets, 2)}, ${element(module.vpc.private_subnets, 0)}, ${element(module.vpc.private_subnets, 1)}, ${element(module.vpc.private_subnets, 2)}"
+      "service.beta.kubernetes.io/aws-load-balancer-subnets"         = "${element(module.vpc.public_subnets, 0)},${element(module.vpc.public_subnets, 1)}, ${element(module.vpc.public_subnets, 2)}"
     }
   }
 
   spec {
     selector = {
-      app = "web-app-lb"
+      app = "web-app"
     }
     port {
       port        = 80
