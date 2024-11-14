@@ -223,7 +223,7 @@ resource "aws_instance" "database_server" {
       "sudo yum install -y mongodb-mongosh-shared-openssl3",
       "sudo yum install -y mongodb-org",
       # Make sure connection from outside is possible
-      "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: 0.0.0.0/' /etc/mongod.conf",
+      "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: ::,0.0.0.0/' /etc/mongod.conf",
       # Start MongoDB
       "sudo systemctl start mongod",
       "sudo systemctl daemon-reload",
@@ -235,7 +235,7 @@ resource "aws_instance" "database_server" {
       # Create backup script
       "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
       "echo 'timestamp=$(date +\"%Y-%m-%d_%H-%M-%S\")' | sudo tee -a /usr/local/bin/mongo_backup.sh",
-      "echo 'mongodump --username admin --password password --authenticationDatabase admin --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
+      "echo 'mongodump --out /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "echo 'aws s3 cp /tmp/mongobackup_$timestamp s3://${aws_s3_bucket.wfta_backup_tr_bucket.bucket}/backups/mongobackup_$timestamp --recursive' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "echo 'rm -rf /tmp/mongobackup_$timestamp' | sudo tee -a /usr/local/bin/mongo_backup.sh",
       "sudo chmod +x /usr/local/bin/mongo_backup.sh",
