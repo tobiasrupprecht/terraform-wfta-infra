@@ -137,52 +137,6 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 #################### Unsure if I need the section above
 #############################################################
 
-# Let's test this to see if we can get Container talking to MongoDB
-resource "aws_route_table" "public_0" {
-  vpc_id = module.vpc.vpc_id
-}
-resource "aws_route_table" "public_1" {
-  vpc_id = module.vpc.vpc_id
-}
-resource "aws_route_table" "public_2" {
-  vpc_id = module.vpc.vpc_id
-}
-
-resource "aws_route_table_association" "public_association_0" {
-  subnet_id      = flatten(module.vpc.public_subnets)[0]
-  route_table_id = aws_route_table.public_0.id
-}
-resource "aws_route_table_association" "public_association_1" {
-  subnet_id      = flatten(module.vpc.public_subnets)[1]
-  route_table_id = aws_route_table.public_1.id
-}
-resource "aws_route_table_association" "public_association_2" {
-  subnet_id      = flatten(module.vpc.public_subnets)[2]
-  route_table_id = aws_route_table.public_2.id
-}
-
-resource "aws_route_table" "private_0" {
-  vpc_id = module.vpc.vpc_id
-}
-resource "aws_route_table" "private_1" {
-  vpc_id = module.vpc.vpc_id
-}
-resource "aws_route_table" "private_2" {
-  vpc_id = module.vpc.vpc_id
-}
-
-resource "aws_route_table_association" "private_association_0" {
-  subnet_id      = flatten(module.vpc.private_subnets)[0]
-  route_table_id = aws_route_table.private_0.id
-}
-resource "aws_route_table_association" "private_association_1" {
-  subnet_id      = flatten(module.vpc.private_subnets)[1]
-  route_table_id = aws_route_table.private_1.id
-}
-resource "aws_route_table_association" "private_association_2" {
-  subnet_id      = flatten(module.vpc.private_subnets)[2]
-  route_table_id = aws_route_table.private_2.id
-}
 
 # S3 Bucket for Database Backups
 resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
