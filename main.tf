@@ -137,6 +137,25 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 #################### Unsure if I need the section above
 #############################################################
 
+# Let's test this to see if we can get Container talking to MongoDB
+resource "aws_route_table" "public" {
+  vpc_id = module.vpc.vpc_id
+}
+
+resource "aws_route_table_association" "public_association" {
+  subnet_id      = module.vpc.public_subnets
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = module.vpc.vpc_id
+}
+
+resource "aws_route_table_association" "private_association" {
+  subnet_id      = module.vpc.private_subnets
+  route_table_id = aws_route_table.private.id
+}
+
 # S3 Bucket for Database Backups
 resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
   bucket = "wfta-backup-bucket-tr"
