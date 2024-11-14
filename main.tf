@@ -190,7 +190,7 @@ resource "aws_key_pair" "ssh-key" {
 resource "aws_instance" "database_server" {
   ami                         = "ami-066a7fbea5161f451" # Amazon Linux 2023 AMI
   instance_type               = "t2.micro"
-  subnet_id                   = "${element(module.vpc.public_subnets, 0)}"
+  subnet_id                   = element(module.vpc.public_subnets, 0)
   vpc_security_group_ids      = [aws_security_group.database_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
@@ -268,15 +268,16 @@ resource "aws_instance" "database_server" {
 
 # EKS Cluster for Web Application
 module "eks" {
-  source                         = "terraform-aws-modules/eks/aws"
-  cluster_name                   = "web-app-cluster"
-  cluster_version                = "1.31"
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnets
-# create_iam_role                = false
-# iam_role_arn                   = var.arn
-  cluster_endpoint_public_access = true
-  authentication_mode            = "API_AND_CONFIG_MAP"
+  source                                   = "terraform-aws-modules/eks/aws"
+  cluster_name                             = "web-app-cluster"
+  cluster_version                          = "1.31"
+  vpc_id                                   = module.vpc.vpc_id
+  subnet_ids                               = module.vpc.private_subnets
+  enable_cluster_creator_admin_permissions = true
+  cluster_endpoint_public_access           = true
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  # create_iam_role                        = false
+  # iam_role_arn                           = XYZ
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
@@ -351,7 +352,7 @@ resource "kubernetes_service" "web_app_lb" {
       target_port = 8080
     }
     load_balancer_ip = null # AWS will automatically assign an external IP
-    type = "LoadBalancer"
+    type             = "LoadBalancer"
   }
 }
 

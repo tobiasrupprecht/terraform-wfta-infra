@@ -6,11 +6,11 @@ variable "private_key" {
   type = string
 }
 variable "region" {
-  type = string
+  type    = string
   default = "us-west-2"
 }
-variable "arn"{
-  type = string
+variable "user_arn" {
+  type    = string
   default = "arn:aws:iam::977099029806:user/wfta"
 }
 
