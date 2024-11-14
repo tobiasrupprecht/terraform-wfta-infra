@@ -9,3 +9,8 @@ variable "region" {
   type = string
   default = "us-west-2"
 }
+variable "arn"{
+  type = string
+  default = "arn:aws:iam::977099029806:user/wfta"
+}
+
