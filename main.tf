@@ -280,12 +280,12 @@ module "eks" {
   # iam_role_arn                           = XYZ
 
   eks_managed_node_group_defaults = {
-    instance_types = ["t2.micro"]
+    instance_types = ["m5a.large"]
   }
 
   eks_managed_node_groups = {
     web_app_nodes = {
-      instance_types = ["t2.micro"]
+      instance_types = ["m5a.large"]
 
       min_size     = 1
       max_size     = 3
