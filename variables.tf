@@ -11,6 +11,6 @@ variable "region" {
 }
 variable "user_arn" {
   type    = string
-  default = "arn:aws:iam::977099029806:user/wfta"
+  default = "XYZ"
 }
 
