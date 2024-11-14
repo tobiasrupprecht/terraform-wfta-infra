@@ -142,9 +142,16 @@ resource "aws_route_table" "public" {
   vpc_id = module.vpc.vpc_id
 }
 
-resource "aws_route_table_association" "public_association" {
-  count          = length(module.vpc.public_subnets)
-  subnet_id      = module.vpc.public_subnets[count.index].id
+resource "aws_route_table_association" "public_association_0" {
+  subnet_id      = flatten(module.vpc.public_subnets)[0]
+  route_table_id = aws_route_table.public.id
+}
+resource "aws_route_table_association" "public_association_1" {
+  subnet_id      = flatten(module.vpc.public_subnets)[1]
+  route_table_id = aws_route_table.public.id
+}
+resource "aws_route_table_association" "public_association_2" {
+  subnet_id      = flatten(module.vpc.public_subnets)[2]
   route_table_id = aws_route_table.public.id
 }
 
@@ -152,9 +159,16 @@ resource "aws_route_table" "private" {
   vpc_id = module.vpc.vpc_id
 }
 
-resource "aws_route_table_association" "private_association" {
-  count          = length(module.vpc.private_subnets)
-  subnet_id      = module.vpc.private_subnets[count.index].id
+resource "aws_route_table_association" "private_association_0" {
+  subnet_id      = flatten(module.vpc.private_subnets)[0]
+  route_table_id = aws_route_table.private.id
+}
+resource "aws_route_table_association" "private_association_1" {
+  subnet_id      = flatten(module.vpc.private_subnets)[1]
+  route_table_id = aws_route_table.private.id
+}
+resource "aws_route_table_association" "private_association_2" {
+  subnet_id      = flatten(module.vpc.private_subnets)[2]
   route_table_id = aws_route_table.private.id
 }
 
