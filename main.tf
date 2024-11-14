@@ -309,12 +309,22 @@ resource "aws_security_group" "eks_lb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-# Kubernetes provider
-#provider "kubernetes" {
-#  host                   = module.eks.cluster_endpoint
-#  token                  = data.aws_eks_cluster_auth.main.token
-#  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-#}
+
+# Kubernetes Provider
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = [
+      "eks",
+      "get-token",
+      "--cluster-name",
+      data.aws_eks_cluster.cluster.name
+    ]
+  }
+}
 
 # Kubernetes Service for Web Application
 resource "kubernetes_service" "web_app_lb" {
