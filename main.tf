@@ -143,7 +143,8 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public_association" {
-  subnet_id      = module.vpc.public_subnets
+  count          = length(module.vpc.public_subnets)
+  subnet_id      = module.vpc.public_subnets[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
@@ -152,7 +153,8 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private_association" {
-  subnet_id      = module.vpc.private_subnets
+  count          = length(module.vpc.private_subnets)
+  subnet_id      = module.vpc.private_subnets[count.index].id
   route_table_id = aws_route_table.private.id
 }
 
