@@ -21,11 +21,6 @@ output "cluster_name" {
   value       = module.eks.cluster_name
 }
 
-output "load_balancer_address" {
-  description = "Public IP of the LoadBalancer service"
-  value       = kubernetes_service.web_app_lb.status[0].load_balancer[0].ingress[0].ip
-}
-
 output "load_balancer_hostname" {
   value = kubernetes_service.web_app_lb.status.0.load_balancer.0.ingress.0.hostname
 }
