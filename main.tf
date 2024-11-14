@@ -366,7 +366,7 @@ resource "kubernetes_deployment" "web_app_deployment" {
   }
 
   spec {
-    replicas = 2
+    replicas = 1
     selector {
       match_labels = {
         app = "web-app"
