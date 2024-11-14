@@ -275,6 +275,7 @@ module "eks" {
   subnet_ids                     = module.vpc.private_subnets
   iam_role_arn                   = aws_iam_role.eks_role.arn
   cluster_endpoint_public_access = true
+  authentication_mode            = "API_AND_CONFIG_MAP"
 
   eks_managed_node_group_defaults = {
     instance_types = ["t2.micro"]
