@@ -273,7 +273,7 @@ module "eks" {
   cluster_version                = "1.31"
   vpc_id                         = module.vpc.vpc_id
   subnet_ids                     = module.vpc.private_subnets
-  iam_role_arn                   = aws_iam_role.eks_role.arn
+ # iam_role_arn                   = aws_iam_role.eks_role.arn
   cluster_endpoint_public_access = true
   authentication_mode            = "API_AND_CONFIG_MAP"
 
