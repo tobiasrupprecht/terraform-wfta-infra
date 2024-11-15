@@ -407,7 +407,7 @@ resource "kubernetes_deployment" "web_app_deployment" {
           }
           env {
             name  = "MONGODB_URI"
-            value = "mongodb://admin:password@${aws_instance.database_server.private_ip}:27017/?ssl=false&authSource=admin"
+            value = "mongodb://admin:password@${aws_instance.database_server.private_ip}:27017/?tls=false&authSource=admin"
           }
           env {
             name  = "SECRET_KEY"
