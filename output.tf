@@ -12,10 +12,10 @@ output "cluster_security_group_id" {
   value       = module.eks.cluster_security_group_id
 }
 
-output "EKS_security_group_id" {
-  description = "Security group ids attached to the cluster control plane"
-  value       = aws_security_group.eks_sg.id 
-}
+#output "EKS_security_group_id" {
+#  description = "Security group ids attached to the cluster control plane"
+#  value       = aws_security_group.eks_sg.id 
+#}
 
 output "region" {
   description = "AWS region"
