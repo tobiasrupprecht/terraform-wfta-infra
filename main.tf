@@ -397,7 +397,7 @@ resource "kubernetes_deployment" "web_app_deployment" {
       }
       spec {
         container {
-          image = "977099029806.dkr.ecr.us-west-2.amazonaws.com/wfta:0.5"
+          image = "977099029806.dkr.ecr.us-west-2.amazonaws.com/wfta:0.6"
           name  = "web-app"
 
           # Environment variables for DB connection
@@ -412,18 +412,6 @@ resource "kubernetes_deployment" "web_app_deployment" {
           env {
             name  = "SECRET_KEY"
             value = "secret123"
-          }
-          env {
-            name  = "DB_USER"
-            value = "admin"
-          }
-          env {
-            name  = "DB_PASS"
-            value = "password"
-          }
-          env {
-            name  = "DB_NAME"
-            value = "admin"
           }
           port {
             container_port = 8080
