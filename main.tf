@@ -17,60 +17,60 @@ module "vpc" {
   enable_dns_hostnames = true
 }
 
-resource "aws_network_acl" "main" {
-  vpc_id = module.vpc.vpc_id
-  subnet_ids = concat(module.vpc.private_subnets, module.vpc.public_subnets)
-
-  egress {
-    protocol   = "-1"
-    rule_no    = 200
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
-  }
-
-  ingress {
-    protocol   = "-1"
-    rule_no    = 200
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
-  }
-
-  tags = {
-    Name = "main"
-  }
-}
+#resource "aws_network_acl" "main" {
+#  vpc_id = module.vpc.vpc_id
+#  subnet_ids = concat(module.vpc.private_subnets, module.vpc.public_subnets)
+#
+#  egress {
+#    protocol   = "-1"
+#    rule_no    = 200
+#    action     = "allow"
+#    cidr_block = "0.0.0.0/0"
+#    from_port  = 0
+#    to_port    = 0
+#  }
+#
+#  ingress {
+#    protocol   = "-1"
+#    rule_no    = 200
+#    action     = "allow"
+#    cidr_block = "0.0.0.0/0"
+#    from_port  = 0
+#    to_port    = 0
+#  }
+#
+#  tags = {
+#    Name = "main"
+#  }
+#}
 
 # Security Group for EKS Cluster
-resource "aws_security_group" "eks_sg" {
-  vpc_id = module.vpc.vpc_id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Allow traffic to LB
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Allow secured traffic from the public internet
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+#resource "aws_security_group" "eks_sg" {
+#  vpc_id = module.vpc.vpc_id
+#
+#  egress {
+#    from_port   = 0
+#    to_port     = 0
+#    protocol    = "-1"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  # Allow traffic to LB
+#  ingress {
+#    from_port   = 80
+#    to_port     = 80
+#    protocol    = "tcp"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  # Allow secured traffic from the public internet
+#  ingress {
+#    from_port   = 443
+#    to_port     = 443
+#    protocol    = "tcp"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#}
 
 # Security Group for Database Server
 resource "aws_security_group" "database_sg" {
@@ -292,7 +292,7 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
   authentication_mode                      = "API_AND_CONFIG_MAP"
-  cluster_security_group_id                = aws_security_group.eks_sg.id 
+  # cluster_security_group_id              = aws_security_group.eks_sg.id 
   # create_iam_role                        = false
   # iam_role_arn                           = XYZ
 
