@@ -17,6 +17,33 @@ module "vpc" {
   enable_dns_hostnames = true
 }
 
+resource "aws_network_acl" "main" {
+  vpc_id = module.vpc.vpc_id
+  subnet_ids = ["${module.vpc.private_subnets}, ${module.vpc.public_subnets}"]
+
+  egress {
+    protocol   = "-1"
+    rule_no    = 200
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  ingress {
+    protocol   = "-1"
+    rule_no    = 200
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  tags = {
+    Name = "main"
+  }
+}
+
 # Security Group for Database Server
 resource "aws_security_group" "database_sg" {
   vpc_id = module.vpc.vpc_id
