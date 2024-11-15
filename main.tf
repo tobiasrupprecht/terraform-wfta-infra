@@ -239,7 +239,7 @@ resource "aws_instance" "database_server" {
       "sudo yum install -y mongodb-mongosh-shared-openssl3",
       "sudo yum install -y mongodb-org",
       # Make sure connection from outside is possible
-      "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: ::,0.0.0.0/' /etc/mongod.conf",
+      "sudo sed -i 's/bindIp: 127.0.0.1  # Enter 0.0.0.0,::.*/bindIp: 0.0.0.0/' /etc/mongod.conf",
       # Start MongoDB
       "sudo systemctl start mongod",
       "sudo systemctl daemon-reload",
@@ -247,6 +247,7 @@ resource "aws_instance" "database_server" {
       "sudo sleep 10",
       # Configure MongoDB authentication
       "sudo mongosh --eval '\"db.createUser({user: \"admin\", pwd: \"password\", roles:[{role: \"root\", db: \"admin\"}]})\"'",
+      "sudo mongosh --eval '\"db.createUser({user: \"db\", pwd: \"dbpass\", roles:[{role: \"readWrite\", db: \"db\"}]})\"'",
 
       # Create backup script
       "echo '#!/bin/bash' | sudo tee /usr/local/bin/mongo_backup.sh",
@@ -407,7 +408,7 @@ resource "kubernetes_deployment" "web_app_deployment" {
           }
           env {
             name  = "MONGODB_URI"
-            value = "mongodb://MyTester:test@${aws_instance.database_server.private_ip}:27017/test"
+            value = "mongodb://db:dbpass@${aws_instance.database_server.private_ip}:27017/db"
           }
           env {
             name  = "SECRET_KEY"
