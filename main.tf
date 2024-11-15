@@ -89,7 +89,7 @@ resource "aws_security_group" "database_sg" {
     to_port     = 27017
     protocol    = "tcp"
   # cidr_blocks = ["10.0.0.0/16"]
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = module.vpc.private_subnets_cidr_blocks
   }
 
   # Allow SSH from the public internet
@@ -152,47 +152,6 @@ resource "aws_iam_role_policy_attachment" "s3_backup_policy_attach" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 }
-######### Unsure if I need the following section
-####################################
-# EKS IAM Role and Policies
-#resource "aws_iam_role" "eks_role" {
-#  name = "eks_role"
-#
-#  assume_role_policy = jsonencode({
-#    Version = "2012-10-17",
-#    Statement = [
-#      {
-#        Action = "sts:AssumeRole",
-#        Effect = "Allow",
-#        Principal = {
-#          Service = "eks.amazonaws.com"
-#        }
-#      }
-#    ]
-#  })
-#}
-#
-#resource "aws_iam_role_policy_attachment" "eks_policy_attachment" {
-#  role       = aws_iam_role.eks_role.name
-#  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-#}
-#
-#resource "aws_iam_role_policy_attachment" "eks_service_policy_attachment" {
-#  role       = aws_iam_role.eks_role.name
-#  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-#}
-#
-#resource "aws_iam_role_policy_attachment" "eks_vpc_policy_attachment" {
-#  role       = aws_iam_role.eks_role.name
-#  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-#}
-
-#resource "aws_iam_instance_profile" "eks_instance_profile" {
-#  role = aws_iam_role.eks_role.name
-#}
-#################### Unsure if I need the section above
-#############################################################
-
 
 # S3 Bucket for Database Backups
 resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
