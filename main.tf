@@ -55,7 +55,7 @@ resource "aws_security_group" "eks_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow MongoDB traffic within VPC
+  # Allow traffic to LB
   ingress {
     from_port   = 80
     to_port     = 80
@@ -63,7 +63,7 @@ resource "aws_security_group" "eks_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow SSH from the public internet
+  # Allow secured traffic from the public internet
   ingress {
     from_port   = 443
     to_port     = 443
@@ -332,7 +332,7 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
   authentication_mode                      = "API_AND_CONFIG_MAP"
-  cluster_security_group_id                = [aws_security_group.eks_sg.id] 
+  cluster_security_group_id                = aws_security_group.eks_sg.id 
   # create_iam_role                        = false
   # iam_role_arn                           = XYZ
 
