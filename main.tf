@@ -1,6 +1,6 @@
 # Provider configuration
 provider "aws" {
-  region = var.region # Set your desired AWS region here
+  region = var.region
 }
 
 # Define the VPC and subnets
@@ -88,7 +88,6 @@ resource "aws_security_group" "database_sg" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-  # cidr_blocks = ["10.0.0.0/16"]
     cidr_blocks = module.vpc.private_subnets_cidr_blocks
   }
 
