@@ -397,7 +397,7 @@ resource "kubernetes_deployment" "web_app_deployment" {
       }
       spec {
         container {
-          image = "977099029806.dkr.ecr.us-west-2.amazonaws.com/wfta:0.4"
+          image = "977099029806.dkr.ecr.us-west-2.amazonaws.com/wfta:0.5"
           name  = "web-app"
 
           # Environment variables for DB connection
