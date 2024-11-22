@@ -165,6 +165,7 @@ resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
 resource "aws_s3_bucket_acl" "public" {
   depends_on = [
     aws_s3_bucket_public_access_block.wfta_backup_tr_bucket_block,
+    aws_s3_bucket_ownership_controls.s3_bucket_acl_ownership
   ]
   bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
   acl    = "public-read"
@@ -176,6 +177,14 @@ resource "aws_s3_bucket_public_access_block" "wfta_backup_tr_bucket_block" {
 
   block_public_acls   = false
   block_public_policy = false
+}
+
+# Resource to avoid error "AccessControlListNotSupported: The bucket does not allow ACLs"
+resource "aws_s3_bucket_ownership_controls" "s3_bucket_acl_ownership" {
+  bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
+  rule {
+    object_ownership = "ObjectWriter"
+  }
 }
 
 # S3 Bucket Versioning
