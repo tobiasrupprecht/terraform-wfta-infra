@@ -161,6 +161,15 @@ resource "aws_s3_bucket" "wfta_backup_tr_bucket" {
   }
 }
 
+# Enabling S3 Public access
+resource "aws_s3_bucket_acl" "public" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.wfta_backup_tr_bucket_block,
+  ]
+  bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
+  acl    = "public-read"
+}
+
 # S3 Bucket Public Access Block
 resource "aws_s3_bucket_public_access_block" "wfta_backup_tr_bucket_block" {
   bucket = aws_s3_bucket.wfta_backup_tr_bucket.id
